@@ -1,4 +1,4 @@
-package numunun.maploader;
+package numunun.mapswitcher;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;

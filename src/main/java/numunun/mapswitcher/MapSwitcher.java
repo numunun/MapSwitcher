@@ -1,4 +1,4 @@
-package numunun.maploader;
+package numunun.mapswitcher;
 
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.event.RegisterCommandsEvent;
@@ -10,12 +10,12 @@ import net.minecraftforge.fml.common.Mod;
 import org.slf4j.Logger;
 
 // 서버 전용 맵 불러오기 모드: 서버 폴더의 maps/ 안에 있는 맵을 차원으로 열고 플레이어를 이동
-@Mod(MapLoader.MODID)
-public final class MapLoader {
-    public static final String MODID = "maploader";
+@Mod(MapSwitcher.MODID)
+public final class MapSwitcher {
+    public static final String MODID = "mapswitcher";
     public static final Logger LOG = LogUtils.getLogger();
 
-    public MapLoader() {}
+    public MapSwitcher() {}
 
     @Mod.EventBusSubscriber(modid = MODID)
     public static final class Events {
@@ -32,7 +32,7 @@ public final class MapLoader {
             try {
                 MapManager.tick(e.getServer());
             } catch (Exception ex) {
-                LOG.error("[MapLoader] 맵 처리 중 오류", ex);
+                LOG.error("[mapswitcher] 맵 처리 중 오류", ex);
             }
         }
 

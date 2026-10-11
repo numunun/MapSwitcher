@@ -63,7 +63,7 @@ versionRange = "${minecraft_version_range}"
 ordering = "NONE"
 side = "BOTH"
 
-[[dependencies.maploader]]
+[[dependencies.mapswitcher]]
 modId="infiniverse"
 mandatory=true
 versionRange="[1.0.0.5,)"

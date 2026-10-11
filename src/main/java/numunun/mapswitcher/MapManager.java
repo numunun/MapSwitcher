@@ -1,4 +1,4 @@
-package numunun.maploader;
+package numunun.mapswitcher;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -78,7 +78,7 @@ public final class MapManager {
     }
 
     static ResourceKey<Level> keyOf(String name) {
-        return ResourceKey.create(Registries.DIMENSION, new ResourceLocation(MapLoader.MODID, name));
+        return ResourceKey.create(Registries.DIMENSION, new ResourceLocation(MapSwitcher.MODID, name));
     }
 
     // 맵 이름 = 차원 이름이라 영어 소문자, 숫자, _ - . 만 가능
@@ -98,7 +98,7 @@ public final class MapManager {
                     .sorted()
                     .forEach(out::add);
         } catch (IOException e) {
-            MapLoader.LOG.error("[MapLoader] maps 폴더 읽기 실패", e);
+            MapSwitcher.LOG.error("[mapswitcher] maps 폴더 읽기 실패", e);
         }
         return out;
     }
@@ -194,10 +194,10 @@ public final class MapManager {
         }, Util.backgroundExecutor()).whenComplete((v, err) -> server.execute(() -> {
             saving = false;
             if (err != null) {
-                MapLoader.LOG.error("[MapLoader] 맵 저장 실패: " + newName, err);
+                MapSwitcher.LOG.error("[mapswitcher] 맵 저장 실패: " + newName, err);
                 broadcast(server, Component.literal("[맵] 저장 실패: " + newName + " (서버 로그 확인)").withStyle(ChatFormatting.RED));
             } else {
-                MapLoader.LOG.info("[MapLoader] 맵 저장: {} → maps/{}", sourceName, newName);
+                MapSwitcher.LOG.info("[mapswitcher] 맵 저장: {} → maps/{}", sourceName, newName);
                 broadcast(server, Component.literal("[맵] 저장 완료: maps/" + newName).withStyle(ChatFormatting.GRAY));
             }
         }));
@@ -274,7 +274,7 @@ public final class MapManager {
     private static void finish(MinecraftServer server, Job j, @Nullable Throwable err) {
         job = null;
         if (err != null) {
-            MapLoader.LOG.error("[MapLoader] 맵 복사 실패: " + j.name, err);
+            MapSwitcher.LOG.error("[mapswitcher] 맵 복사 실패: " + j.name, err);
             broadcast(server, Component.literal("[맵] 불러오기 실패: " + j.name + " (서버 로그 확인)").withStyle(ChatFormatting.RED));
             return;
         }
@@ -282,7 +282,7 @@ public final class MapManager {
         try {
             level = InfiniverseAPI.get().getOrCreateLevel(server, j.key, () -> createStem(server));
         } catch (Exception e) {
-            MapLoader.LOG.error("[MapLoader] 맵 차원 만들기 실패: " + j.name, e);
+            MapSwitcher.LOG.error("[mapswitcher] 맵 차원 만들기 실패: " + j.name, e);
             broadcast(server, Component.literal("[맵] 불러오기 실패: " + j.name + " (서버 로그 확인)").withStyle(ChatFormatting.RED));
             return;
         }
@@ -294,7 +294,7 @@ public final class MapManager {
             if (p != null) teleport(p, level, spawn);
         }
         broadcast(server, Component.literal("[맵] " + displayName(server, j.name) + " 불러오기 완료").withStyle(ChatFormatting.GRAY));
-        MapLoader.LOG.info("[MapLoader] 맵 불러옴: {} ({}명 이동)", j.name, j.movers.size());
+        MapSwitcher.LOG.info("[mapswitcher] 맵 불러옴: {} ({}명 이동)", j.name, j.movers.size());
     }
 
     // 맵 밖은 아무것도 생성되지 않는 빈 공간
@@ -302,7 +302,7 @@ public final class MapManager {
         RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, server.registryAccess());
         JsonElement json = JsonParser.parseString(VOID_GENERATOR);
         ChunkGenerator generator = ChunkGenerator.CODEC.parse(ops, json)
-                .getOrThrow(false, msg -> MapLoader.LOG.error("[MapLoader] 빈 공간 생성기 오류: {}", msg));
+                .getOrThrow(false, msg -> MapSwitcher.LOG.error("[mapswitcher] 빈 공간 생성기 오류: {}", msg));
         return new LevelStem(server.overworld().dimensionTypeRegistration(), generator);
     }
 
@@ -322,7 +322,7 @@ public final class MapManager {
                 return new Spawn(data.getInt("SpawnX") + 0.5, data.getInt("SpawnY"), data.getInt("SpawnZ") + 0.5,
                         data.getFloat("SpawnAngle"));
             } catch (IOException e) {
-                MapLoader.LOG.warn("[MapLoader] level.dat 읽기 실패: {}", dat);
+                MapSwitcher.LOG.warn("[mapswitcher] level.dat 읽기 실패: {}", dat);
             }
         }
         return new Spawn(0.5, 100, 0.5, 0f);
@@ -341,7 +341,7 @@ public final class MapManager {
         try (Reader r = Files.newBufferedReader(json, StandardCharsets.UTF_8)) {
             return JsonParser.parseReader(r).getAsJsonObject();
         } catch (Exception e) {
-            MapLoader.LOG.warn("[MapLoader] map.json 읽기 실패: {}", json);
+            MapSwitcher.LOG.warn("[mapswitcher] map.json 읽기 실패: {}", json);
             return null;
         }
     }
@@ -377,9 +377,9 @@ public final class MapManager {
         current = null;
         job = null;
         for (ServerLevel level : server.getAllLevels()) {
-            if (level.dimension().location().getNamespace().equals(MapLoader.MODID)) {
+            if (level.dimension().location().getNamespace().equals(MapSwitcher.MODID)) {
                 current = level.dimension();
-                MapLoader.LOG.info("[MapLoader] 지난번 맵이 열려 있음: {}", current.location().getPath());
+                MapSwitcher.LOG.info("[mapswitcher] 지난번 맵이 열려 있음: {}", current.location().getPath());
                 break;
             }
         }
