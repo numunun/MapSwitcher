@@ -47,6 +47,10 @@ public final class MapCommands {
                         .executes(ctx -> leave(ctx, List.of(ctx.getSource().getPlayerOrException())))
                         .then(Commands.argument("targets", EntityArgument.players())
                                 .executes(ctx -> leave(ctx, EntityArgument.getPlayers(ctx, "targets")))))
+                .then(Commands.literal("save")
+                        .then(Commands.argument("name", StringArgumentType.word())
+                                .executes(ctx -> save(ctx, false))
+                                .then(Commands.literal("force").executes(ctx -> save(ctx, true)))))
                 .then(Commands.literal("unload").executes(MapCommands::unload)));
     }
 
@@ -96,6 +100,12 @@ public final class MapCommands {
     private static int leave(CommandContext<CommandSourceStack> ctx, Collection<ServerPlayer> targets) {
         for (ServerPlayer p : targets) MapManager.sendToOverworld(p);
         return ok(ctx, targets.size() + "명을 원래 월드로 보냈습니다.");
+    }
+
+    private static int save(CommandContext<CommandSourceStack> ctx, boolean force) {
+        String name = StringArgumentType.getString(ctx, "name");
+        String err = MapManager.save(ctx.getSource().getServer(), name, force);
+        return err == null ? 1 : fail(ctx, err);
     }
 
     private static int unload(CommandContext<CommandSourceStack> ctx) {

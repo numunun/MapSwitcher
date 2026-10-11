@@ -63,6 +63,8 @@ public final class MapManager {
         }
     }
 
+    private static volatile boolean saving = false;  // 저장 중
+
     record Spawn(double x, double y, double z, float yaw) {}
 
     @Nullable private static ResourceKey<Level> current;  // 지금 열려 있는 맵
@@ -114,6 +116,7 @@ public final class MapManager {
     // 문제가 있으면 메시지, 시작했으면 null
     @Nullable
     public static String load(MinecraftServer server, String name, Move move, @Nullable ServerPlayer caller) {
+        if (saving) return "맵을 저장하는 중입니다. 잠시 후 다시 시도하세요.";
         if (job != null) return "다른 맵을 불러오는 중입니다. 잠시 후 다시 시도하세요.";
         if (!isValidName(name)) return "맵 폴더 이름은 영어 소문자, 숫자, _ 만 쓸 수 있습니다.";
         Path template = mapsDir(server).resolve(name);
@@ -142,12 +145,76 @@ public final class MapManager {
     // ── 닫기 ──
     @Nullable
     public static String unload(MinecraftServer server) {
+        if (saving) return "맵을 저장하는 중입니다. 잠시 후 다시 시도하세요.";
         if (job != null) return "맵을 불러오는 중에는 닫을 수 없습니다.";
         if (current == null) return "열려 있는 맵이 없습니다.";
         closeLevel(server, current);
         current = null;
         broadcast(server, Component.literal("[맵] 맵을 닫았습니다.").withStyle(ChatFormatting.GRAY));
         return null;
+    }
+
+    // ── 저장: 지금 열린 맵의 상태를 maps/<이름> 으로 저장 ──
+    @Nullable
+    public static String save(MinecraftServer server, String newName, boolean force) {
+        if (job != null) return "맵을 불러오는 중에는 저장할 수 없습니다.";
+        if (saving) return "이미 저장 중입니다.";
+        if (current == null) return "열려 있는 맵이 없습니다.";
+        if (!isValidName(newName)) return "맵 이름은 영어 소문자, 숫자, _ 만 쓸 수 있습니다.";
+        ServerLevel level = server.getLevel(current);
+        if (level == null) return "맵 차원을 찾을 수 없습니다.";
+
+        Path target = mapsDir(server).resolve(newName);
+        if (Files.exists(target) && !force) {
+            return "maps/" + newName + " 이(가) 이미 있습니다. 덮어쓰려면: /map save " + newName + " force";
+        }
+
+        level.save(null, true, false);  // 메모리에 있던 변경 사항을 파일로 내보내기
+
+        String sourceName = current.location().getPath();
+        Path source = DimensionType.getStorageFolder(current, server.getWorldPath(LevelResource.ROOT));
+        Spawn spawn = readSpawn(mapsDir(server).resolve(sourceName));
+        String display = newName.equals(sourceName) ? displayName(server, sourceName) : newName;
+        Path temp = mapsDir(server).resolve(".tmp").resolve(newName);
+
+        saving = true;
+        broadcast(server, Component.literal("[맵] " + newName + " 저장 중...").withStyle(ChatFormatting.GRAY));
+        CompletableFuture.runAsync(() -> {
+            try {
+                // 임시 폴더에 먼저 복사하고, 다 끝나면 바꿔치기 (도중에 실패해도 기존 맵은 안전)
+                deleteRecursively(temp);
+                copyMap(source, temp);
+                writeInfo(temp, display, spawn);
+                deleteRecursively(target);
+                Files.createDirectories(target.getParent());
+                Files.move(temp, target);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }, Util.backgroundExecutor()).whenComplete((v, err) -> server.execute(() -> {
+            saving = false;
+            if (err != null) {
+                MapLoader.LOG.error("[MapLoader] 맵 저장 실패: " + newName, err);
+                broadcast(server, Component.literal("[맵] 저장 실패: " + newName + " (서버 로그 확인)").withStyle(ChatFormatting.RED));
+            } else {
+                MapLoader.LOG.info("[MapLoader] 맵 저장: {} → maps/{}", sourceName, newName);
+                broadcast(server, Component.literal("[맵] 저장 완료: maps/" + newName).withStyle(ChatFormatting.GRAY));
+            }
+        }));
+        return null;
+    }
+
+    private static void writeInfo(Path dir, String name, Spawn s) throws IOException {
+        JsonObject o = new JsonObject();
+        o.addProperty("name", name);
+        JsonArray a = new JsonArray();
+        a.add(s.x());
+        a.add(s.y());
+        a.add(s.z());
+        o.add("spawn", a);
+        o.addProperty("yaw", s.yaw());
+        Files.createDirectories(dir);
+        Files.writeString(dir.resolve("map.json"), o.toString(), StandardCharsets.UTF_8);
     }
 
     // 안에 있는 사람을 원래 월드로 보내고 차원 등록 해제 (틱이 끝날 때 실제로 제거됨)
