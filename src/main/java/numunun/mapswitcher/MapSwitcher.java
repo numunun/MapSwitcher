@@ -7,6 +7,8 @@ import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.config.ModConfig;
 import org.slf4j.Logger;
 
 // 서버 전용 맵 불러오기 모드: 서버 폴더의 maps/ 안에 있는 맵을 차원으로 열고 플레이어를 이동
@@ -15,7 +17,9 @@ public final class MapSwitcher {
     public static final String MODID = "mapswitcher";
     public static final Logger LOG = LogUtils.getLogger();
 
-    public MapSwitcher() {}
+    public MapSwitcher() {
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, MapSwitcherConfig.SPEC);
+    }
 
     @Mod.EventBusSubscriber(modid = MODID)
     public static final class Events {

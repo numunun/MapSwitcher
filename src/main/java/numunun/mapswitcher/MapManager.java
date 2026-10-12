@@ -108,6 +108,11 @@ public final class MapManager {
         return current != null ? current.location().getPath() : null;
     }
 
+    @Nullable
+    public static ResourceKey<Level> currentKey() {
+        return current;
+    }
+
     public static boolean isBusy() {
         return job != null;
     }
@@ -136,6 +141,7 @@ public final class MapManager {
         ResourceKey<Level> key = keyOf(name);
         if (server.getLevel(key) != null) closeLevel(server, key);
         current = null;
+        RestoreManager.clear();
 
         job = new Job(name, movers);
         broadcast(server, Component.literal("[맵] " + displayName(server, name) + " 불러오는 중...").withStyle(ChatFormatting.GRAY));
@@ -150,6 +156,7 @@ public final class MapManager {
         if (current == null) return "열려 있는 맵이 없습니다.";
         closeLevel(server, current);
         current = null;
+        RestoreManager.clear();
         broadcast(server, Component.literal("[맵] 맵을 닫았습니다.").withStyle(ChatFormatting.GRAY));
         return null;
     }
@@ -388,6 +395,7 @@ public final class MapManager {
     static void onServerStopped() {
         current = null;
         job = null;
+        RestoreManager.clear();
     }
 
     private static void broadcast(MinecraftServer server, Component msg) {
